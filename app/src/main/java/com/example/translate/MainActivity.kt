@@ -81,17 +81,17 @@ class MainActivity : AppCompatActivity() {
         val base64Audio = Base64.encodeToString(audioData, Base64.NO_WRAP)
 
         val json = """
-            {
-              "config": {
-                "encoding": "LINEAR16",
-                "sampleRateHertz": 16000,
-                "languageCode": "ja-JP"
-              },
-              "audio": {
-                "content": "$base64Audio"
-              }
-            }
-        """.trimIndent()
+        {
+          "config": {
+            "encoding": "LINEAR16",
+            "sampleRateHertz": 16000,
+            "languageCode": "ja-JP"
+          },
+          "audio": {
+            "content": "$base64Audio"
+          }
+        }
+    """.trimIndent()
 
         val client = OkHttpClient()
         val requestBody = json.toRequestBody("application/json".toMediaType())
@@ -118,9 +118,13 @@ class MainActivity : AppCompatActivity() {
                             if (alternatives.length() > 0) {
                                 val transcript = alternatives.getJSONObject(0).getString("transcript")
 
-                                // UIスレッドでTextViewにセット
-                                runOnUiThread {
-                                    binding.resultText.text = transcript
+                                // 翻訳処理
+                                val translator = TranslateText(targetLanguage = TranslateLanguage.CHINESE)
+                                translator.translate(transcript) { translatedText ->
+                                    runOnUiThread {
+                                        binding.resultText.text =
+                                            "[原文]\n$transcript\n\n[翻訳]\n$translatedText"
+                                    }
                                 }
                             }
                         }
@@ -131,6 +135,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
+
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
