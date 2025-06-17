@@ -8,6 +8,7 @@ import android.media.MediaRecorder
 import android.os.Bundle
 import android.util.Base64
 import android.util.Log
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -29,6 +30,11 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val RECORD_AUDIO_PERMISSION = 1000
+
+    private var isRecording = false
+    private var audioRecord: AudioRecord? = null
+    private lateinit var recordButton: ImageButton
+
     private val apiKey = "AIzaSyBMyqt2BcW2L3Uh8a_c1u0t6D4M5W3Vqdw" // ← APIキーは適宜置き換えてください
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,62 +58,15 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), RECORD_AUDIO_PERMISSION)
         }
 
-        // ボタンのクリックリスナー
-        binding.recordButton.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                == PackageManager.PERMISSION_GRANTED
-            ) {
-                Thread {
-                    try {
-                        val audioData = recordAudio()
-                        sendToSpeechToTextApi(audioData, apiKey)
-                    } catch (e: SecurityException) {
-                        Log.e("Permission", "録音の権限がありません: ${e.message}")
-                    }
-                }.start()
+        recordButton = binding.recordButton
+
+        recordButton.setOnClickListener {
+            if (!isRecording) {
+                startRecording()
             } else {
-                Toast.makeText(this, "マイクの使用許可が必要です", Toast.LENGTH_SHORT).show()
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.RECORD_AUDIO),
-                    RECORD_AUDIO_PERMISSION
-                )
+                stopRecording()
             }
         }
-    }
-
-    private fun recordAudio(durationSec: Int = 5): ByteArray {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            throw SecurityException("録音のパーミッションがありません")
-        }
-
-        val sampleRate = 16000
-        val bufferSize = AudioRecord.getMinBufferSize(
-            sampleRate,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-
-        val audioRecord = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
-            sampleRate,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            bufferSize
-        )
-
-        val audioData = ByteArray(sampleRate * 2 * durationSec)
-        try {
-            audioRecord.startRecording()
-            audioRecord.read(audioData, 0, audioData.size)
-        } finally {
-            audioRecord.stop()
-            audioRecord.release()
-        }
-
-        return audioData
     }
 
     private fun sendToSpeechToTextApi(audioData: ByteArray, apiKey: String) {
@@ -178,5 +137,65 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "マイク使用が拒否されました", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun startRecording() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), RECORD_AUDIO_PERMISSION)
+            return
+        }
+
+        isRecording = true
+        runOnUiThread {
+            recordButton.setImageResource(R.drawable.stop_24px)  // 停止アイコンに切り替え
+        }
+
+        // AudioRecord初期化など録音開始処理
+        val sampleRate = 16000
+        val bufferSize = AudioRecord.getMinBufferSize(
+            sampleRate,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+
+        audioRecord = AudioRecord(
+            MediaRecorder.AudioSource.MIC,
+            sampleRate,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            bufferSize
+        )
+        audioRecord?.startRecording()
+
+        // 録音を別スレッドで行いバッファに貯める処理を開始
+        Thread {
+            val audioData = ByteArray(sampleRate * 2 * 5) // 5秒分のバッファ
+            var offset = 0
+            while (isRecording && offset < audioData.size) {
+                val read = audioRecord?.read(audioData, offset, audioData.size - offset) ?: 0
+                if (read > 0) {
+                    offset += read
+                }
+            }
+            audioRecord?.stop()
+            audioRecord?.release()
+            audioRecord = null
+
+            if (offset > 0) {
+                val actualAudio = audioData.copyOf(offset)
+                sendToSpeechToTextApi(actualAudio, apiKey)
+            }
+
+            isRecording = false
+            runOnUiThread {
+                recordButton.setImageResource(R.drawable.mic_24px)  // マイクアイコンに戻す
+            }
+        }.start()
+    }
+
+    private fun stopRecording() {
+        isRecording = false
+        // スレッドは自動的に録音停止して終了します
     }
 }
