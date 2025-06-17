@@ -51,6 +51,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-
+    implementation ("com.google.mlkit:translate:17.0.3")
+    implementation ("com.google.mlkit:language-id:17.0.6")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

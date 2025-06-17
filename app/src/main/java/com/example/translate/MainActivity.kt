@@ -19,6 +19,7 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import com.google.mlkit.nl.translate.TranslateLanguage
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -67,6 +68,13 @@ class MainActivity : AppCompatActivity() {
                 stopRecording()
             }
         }
+
+        //translate test
+        //low quality
+        val toEnglishTranslator = TranslateText(targetLanguage = TranslateLanguage.ENGLISH)
+        toEnglishTranslator.translate("测试"){}
+        toEnglishTranslator.translate("这个节目也是挺搞笑的，不知道下一集什么时候更新") {  }
+
     }
 
     private fun sendToSpeechToTextApi(audioData: ByteArray, apiKey: String) {
