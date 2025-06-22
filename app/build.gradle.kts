@@ -54,4 +54,11 @@ dependencies {
     implementation ("com.google.mlkit:translate:17.0.3")
     implementation ("com.google.mlkit:language-id:17.0.6")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // To recognize Latin script
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    // To recognize Chinese script
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
+    // To recognize Japanese script
+    implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
+
 }

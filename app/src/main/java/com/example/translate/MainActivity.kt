@@ -19,6 +19,8 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import com.example.translate.databinding.FragmentDashboardBinding
+import com.example.translate.databinding.FragmentHomeBinding
 import com.google.mlkit.nl.translate.TranslateLanguage
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -71,7 +73,7 @@ class MainActivity : AppCompatActivity() {
 
         //translate test
         //low quality
-        val toEnglishTranslator = TranslateText(targetLanguage = TranslateLanguage.ENGLISH)
+        val toEnglishTranslator = TranslateText(targetLanguage = TranslateLanguage.FRENCH)
         toEnglishTranslator.translate("测试"){}
         toEnglishTranslator.translate("这个节目也是挺搞笑的，不知道下一集什么时候更新") {  }
 
