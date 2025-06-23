@@ -60,5 +60,7 @@ dependencies {
     implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
     // To recognize Japanese script
     implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
+    // https://mvnrepository.com/artifact/com.github.bumptech.glide/glide
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 
 }
