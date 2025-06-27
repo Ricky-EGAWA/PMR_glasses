@@ -18,82 +18,98 @@ import android.os.Parcelable
 import android.widget.ImageView
 import com.google.mlkit.vision.common.InputImage
 
-
+/**
+ * A utility class responsible for handling image input from shared intents and performing
+ * text recognition using Google ML Kit.
+ */
 class RecognizeText() {
     private val TAG = "RecognizeText"
 
+    /**
+     * Handles incoming Intent data, specifically for image sharing actions (ACTION_SEND,
+     * ACTION_SEND_MULTIPLE), to extract and return a list of image URIs.
+     * It filters for image types and logs errors if no image data is found or the intent is not
+     * a sharing intent.
+     *
+     * @param intent The Intent received by the activity, potentially containing shared image data.
+     * @return A list of Uri objects representing the shared images, or an empty list if none found.
+     */
     fun getImageUri(intent: Intent): List<Uri> {
-        // 检查 Intent 是否是 ACTION_SEND
+        // check Intent if is ACTION_SEND
         when (intent?.action) {
             Intent.ACTION_SEND -> {
-                // 确保数据类型是图片
+                // Check if the received data type is an image.
                 if (intent.type?.startsWith("image/") == true) {
                     val uri = handleSendImage(intent)
                     if (uri != null) return listOf(uri)
                 } else {
-                    Log.e(TAG, "收到的不是图片数据")
+                    Log.e(TAG, "not image data")
                     return emptyList<Uri>()
                 }
             }
 
             Intent.ACTION_SEND_MULTIPLE -> {
-                // 接收多张图片
+                // Handle multiple image sharing.
                 if (intent.type?.startsWith("image/") == true) {
                     return handleSendMultipleImages(intent)
                 } else {
-                    Log.e(TAG, "收到的不是图片数据")
+                    Log.e(TAG, "not image data")
                     return emptyList<Uri>()
                 }
             }
 
             else -> {
-                Log.e(TAG, "没有收到分享数据")
+                Log.e(TAG, "not get shared data")
                 return emptyList<Uri>()
             }
         }
         return emptyList()
     }
 
+    /**
+     * A helper function to extract a single image URI from an ACTION_SEND Intent's EXTRA_STREAM.
+     * Logs whether the URI was found or not.
+     *
+     * @param intent The ACTION_SEND Intent.
+     * @return The Uri of the shared image, or null if not found.
+     */
     private fun handleSendImage(intent: Intent): Uri? {
         (intent.parcelable<Uri>(Intent.EXTRA_STREAM))?.let { imageUri ->
-            Log.i(TAG, "接收到图片URI: $imageUri")
-//            try {
-//                // 使用 ContentResolver 从 URI 读取图片数据
-//                context.contentResolver.openInputStream(imageUri)?.use { inputStream ->
-//                    val bitmap = BitmapFactory.decodeStream(inputStream)
-//                    imageView.setImageBitmap(bitmap)
-//                    // 在这里你可以将图片保存到本地存储
-//                    // 例如：saveImageToInternalStorage(bitmap, "received_image.jpeg")
-//                }
-//            } catch (e: Exception) {
-//                statusText.text = "无法读取图片: ${e.message}"
-//                e.printStackTrace()
-//            }
+            Log.i(TAG, "received image URI: $imageUri")
             return imageUri
         } ?: run {
-            Log.e(TAG, "未找到图片URI")
+            Log.e(TAG, "can not find image URI")
             return null
         }
     }
 
+    /**
+     * A helper function to extract a list of image URIs from an ACTION_SEND_MULTIPLE Intent's EXTRA_STREAM.
+     * Logs the number of images received or if the list is empty.
+     *
+     * @param intent The ACTION_SEND_MULTIPLE Intent.
+     * @return A list of Uri objects for the shared images, or an empty list if none found.
+     */
     private fun handleSendMultipleImages(intent: Intent): List<Uri> {
         val imageUris = intent.parcelableArrayList<Uri>(Intent.EXTRA_STREAM)
         if (!imageUris.isNullOrEmpty()) {
-            Log.i(TAG, "接收到 ${imageUris.size} 张图片")
-            // 这里你可以遍历 imageUris 并逐个处理
-            // 比如只显示第一张图片
+            Log.i(TAG, "receive ${imageUris.size} images")
             return imageUris.toList()
-//            handleSendImage(Intent().apply {
-//                action = Intent.ACTION_SEND
-//                type = "image/jpeg"
-//                putExtra(Intent.EXTRA_STREAM, imageUris[0])
-//            })
         } else {
-            Log.e(TAG, "未找到图片URI列表")
+            Log.e(TAG, "can not find image URI list")
             return emptyList<Uri>()
         }
     }
 
+    /**
+     * A utility function to demonstrate how to access detailed information (text, bounding boxes,
+     * corner points) from the result of text recognition (ML Kit's 'Text' object).
+     * It iterates through blocks, lines, and individual elements within the recognized text structure.
+     * (Note: This function currently only accesses data and does not perform any specific action
+     * like displaying it).
+     *
+     * @param result The Text object returned by ML Kit's Text Recognition API.
+     */
     private fun getTextInfo(result: Text) {
         val resultText = result.text
         for (block in result.textBlocks) {
@@ -113,7 +129,19 @@ class RecognizeText() {
         }
     }
 
+    /**
+     * Performs text recognition on a given image URI using Google ML Kit.
+     * It selects the appropriate text recognizer (Chinese, Latin, or Japanese) based on the
+     * 'lang' parameter, processes the image, and then invokes the 'onTextRecognized' callback
+     * with the results or logs any errors.
+     *
+     * @param lang The target script language for recognition ("zh" for Chinese, "la" for Latin, "jp" for Japanese).
+     * @param context The Android Context, used to load the image from the URI.
+     * @param uri The Uri of the image to be processed.
+     * @param onTextRecognized A callback function that receives the recognized Text object upon success.
+     */
     fun recognizeText(lang: String, context: Context, uri: Uri, onTextRecognized: (Text) -> Unit) {
+        // Selects the appropriate ML Kit TextRecognizer client based on the specified language.
         val recognizer: TextRecognizer = when (lang) {
             // When using Chinese script library
             "zh" -> TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
@@ -145,14 +173,33 @@ class RecognizeText() {
     }
 }
 
+// --- Extension Functions for Intent Parcelable Handling ---
+// These extension functions provide a safe and backward-compatible way to retrieve Parcelable
+// objects and ArrayLists from an Intent, adapting to changes in Android's API (specifically
+// for Android 13/API 33 - TIRAMISU and above).
 
-// 针对单个 Parcelable 的扩展函数
+/**
+ * Extension function for Intent to safely retrieve a single Parcelable extra.
+ * It uses the newer `getParcelableExtra(key, Class)` method for Android TIRAMISU (API 33+) and above,
+ * and falls back to the deprecated `getParcelableExtra(key)` for older versions to ensure compatibility.
+ *
+ * @param key The name of the extra.
+ * @return The Parcelable object, or null if not found or if the type doesn't match.
+ */
 inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? = when {
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> getParcelableExtra(key, T::class.java)
     else -> @Suppress("DEPRECATION") getParcelableExtra(key) as? T // suppress deprecation warning for older versions
 }
 
-// 针对 Parcelable ArrayList 的扩展函数
+/**
+ * Extension function for Intent to safely retrieve a list of Parcelable extras.
+ * Similar to `parcelable`, it uses the newer `getParcelableArrayListExtra(key, Class)` method
+ * for Android TIRAMISU (API 33+) and above, and the deprecated `getParcelableArrayListExtra(key)`
+ * for older versions.
+ *
+ * @param key The name of the extra.
+ * @return The ArrayList of Parcelable objects, or null if not found or if the type doesn't match.
+ */
 inline fun <reified T : Parcelable> Intent.parcelableArrayList(key: String): ArrayList<T>? = when {
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> getParcelableArrayListExtra(
         key,

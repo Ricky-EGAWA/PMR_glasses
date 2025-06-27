@@ -34,37 +34,40 @@ class DashboardFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-            if (uri != null) {
-                // 用户选择了图片
-                val imageUri = uri
-                Toast.makeText(requireContext(), "URI: $imageUri", Toast.LENGTH_LONG).show()
+        pickImageLauncher =
+            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+                if (uri != null) {
+                    // user choose image
+                    val imageUri = uri
+                    Toast.makeText(requireContext(), "URI: $imageUri", Toast.LENGTH_LONG).show()
 
-                // 将URI显示在TextView中
-                imageUriTextView.text = "URI: \n$imageUri"
+                    // show URI in TextView
+                    imageUriTextView.text = "URI: \n$imageUri"
 
-                // 将图片显示在ImageView中
-                selectedImageView.setImageURI(imageUri) // 直接设置URI即可显示图片
+                    // show image in ImageView
+                    selectedImageView.setImageURI(imageUri)
 
-                // 如果使用Glide/Coil等库加载图片，可以这样做：
-                Glide.with(this).load(imageUri).into(selectedImageView)
-                // 或者 Coil: selectedImageView.load(imageUri)
 
-                // 此时，你已经获取到了图片的Uri (imageUri)。
-                // 你可以将其传递给ViewModel，上传到服务器，或者进行其他操作。
-                val recognizeText = RecognizeText()
-                recognizeText.recognizeText(lang = "la", context = requireContext(), uri = imageUri) { text ->
-                    recognizeTextView.text = text.text
-                    Log.i("RecognizedText",text.text)
+                    Glide.with(this).load(imageUri).into(selectedImageView)
+
+
+                    val recognizeText = RecognizeText()
+                    recognizeText.recognizeText(
+                        lang = "la",
+                        context = requireContext(),
+                        uri = imageUri
+                    ) { text ->
+                        recognizeTextView.text = text.text
+                        Log.i("RecognizedText", text.text)
+                    }
+
+                } else {
+                    // canceled the selection
+                    Toast.makeText(requireContext(), "Select canceled", Toast.LENGTH_SHORT).show()
+                    imageUriTextView.text = "URI: non"
+                    selectedImageView.setImageURI(null) // vide ImageView
                 }
-
-            } else {
-                // 用户取消了图片选择
-                Toast.makeText(requireContext(), "Select canceled", Toast.LENGTH_SHORT).show()
-                imageUriTextView.text = "URI: non"
-                selectedImageView.setImageURI(null) // 清空ImageView
             }
-        }
     }
 
     override fun onCreateView(
@@ -84,8 +87,7 @@ class DashboardFragment : Fragment() {
         recognizeTextView = binding.recognizeTextView
 
         selectImageButton.setOnClickListener {
-            // 触发图片选择器
-            // "image/*" 表示选择所有类型的图片
+            // image selector
             pickImageLauncher.launch("image/*")
         }
         return root
